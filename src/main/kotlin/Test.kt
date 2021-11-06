@@ -42,280 +42,257 @@ private val json = Json { prettyPrint = true }
  * @author github.com/doomsdayrs; github.com/TechnoJo4
  */
 @ExperimentalTime
-object Test {
 
-	// CONFIG
-	private const val SEARCH_VALUE = "world"
-	private const val PRINT_LISTINGS = false
-	private const val PRINT_LIST_STATS = true
-	private const val PRINT_NOVELS = false
-	private const val PRINT_NOVEL_STATS = true
-	private const val PRINT_PASSAGES = true
-	private const val PRINT_REPO_INDEX = false
-	private const val PRINT_METADATA = false
-	private const val REPEAT = false
+// CONFIG
+private const val SEARCH_VALUE = "world"
+private const val PRINT_LISTINGS = false
+private const val PRINT_LIST_STATS = true
+private const val PRINT_NOVELS = false
+private const val PRINT_NOVEL_STATS = true
+private const val PRINT_PASSAGES = true
+private const val PRINT_REPO_INDEX = false
+private const val PRINT_METADATA = false
+private const val REPEAT = false
 
-	/** Load only the [SPECIFIC_NOVEL_URL] to test */
-	private const val SPECIFIC_NOVEL = false
+/** Load only the [SPECIFIC_NOVEL_URL] to test */
+private const val SPECIFIC_NOVEL = false
 
-	/** Novel to load via the extension, useful for novel cases */
-	private const val SPECIFIC_NOVEL_URL = "/"
-	private const val SPECIFIC_CHAPTER = 0
+/** Novel to load via the extension, useful for novel cases */
+private const val SPECIFIC_NOVEL_URL = "/"
+private const val SPECIFIC_CHAPTER = 0
 
-	/** Replace with the directory of the extensions you want to use*/
-	private var DIRECTORY = ""
+/** Replace with the directory of the extensions you want to use*/
+private var DIRECTORY = ""
 
-	private var SOURCES: Array<Pair<String, ExtensionType>> =
-		// Should be an array of the path of the script to the type of that script
-		arrayOf<Pair<String, ExtensionType>>()
+private var SOURCES: Array<Pair<String, ExtensionType>> =
+	// Should be an array of the path of the script to the type of that script
+	arrayOf<Pair<String, ExtensionType>>()
 
-	// END CONFIG
+// END CONFIG
 
-	private val globals = shosetsuGlobals()
+private val globals = shosetsuGlobals()
 
-	/** Resets the color of a line */
-	private const val CRESET: String = "\u001B[0m"
-	private const val CCYAN: String = "\u001B[36m"
-	private const val CPURPLE: String = "\u001B[35m"
-	private const val CRED: String = "\u001B[31m"
-	private const val CGREEN: String = "\u001B[32m"
+/** Resets the color of a line */
+private const val CRESET: String = "\u001B[0m"
+private const val CCYAN: String = "\u001B[36m"
+private const val CPURPLE: String = "\u001B[35m"
+private const val CRED: String = "\u001B[31m"
+private const val CGREEN: String = "\u001B[32m"
 
-	init {
-		ShosetsuLuaLib.libLoader = {
-			outputTimedValue("loadScript") {
-				loadScript(
-					File("$DIRECTORY/src/main/resources/lib/$it.lua"),
-					"lib"
-				)
-			}
-		}
-		httpClient = OkHttpClient.Builder().addInterceptor {
-			outputTimedValue("Time till response") {
-				it.proceed(it.request().also { request ->
-					println(request.url.toUrl().toString())
-				})
-			}
-		}.build()
+private fun loadScript(file: File, source_pre: String = "ext"): LuaValue {
+	val l = try {
+		globals.load(file.readText(), "$source_pre(${file.name})")!!
+	} catch (e: Error) {
+		throw e
+	}
+	return l.call()!!
+}
+
+@OptIn(ExperimentalTime::class)
+private fun showNovel(ext: IExtension, novelURL: String) {
+	val novel = outputTimedValue("ext.parseNovel") {
+		ext.parseNovel(novelURL, true)
 	}
 
-	private fun loadScript(file: File, source_pre: String = "ext"): LuaValue {
-		val l = try {
-			globals.load(file.readText(), "$source_pre(${file.name})")!!
-		} catch (e: Error) {
-			throw e
-		}
-		return l.call()!!
+	while (novel.chapters.isEmpty()) {
+		println("$CRED Chapters are empty $CRESET")
+		return
 	}
 
-	private fun showNovel(ext: IExtension, novelURL: String) {
-		val novel = outputTimedValue("ext.parseNovel") {
-			ext.parseNovel(novelURL, true)
-		}
+	if (PRINT_NOVELS)
+		println(novel)
+	if (PRINT_NOVEL_STATS)
+		println("${novel.title} - ${novel.chapters.size} chapters.")
+	println()
 
-		while (novel.chapters.isEmpty()) {
-			println("$CRED Chapters are empty $CRESET")
-			return
-		}
+	val passage = outputTimedValue("ext.getPassage") {
+		ext.getPassage(novel.chapters[SPECIFIC_CHAPTER].link)
+	}
 
-		if (PRINT_NOVELS)
-			println(novel)
-		if (PRINT_NOVEL_STATS)
-			println("${novel.title} - ${novel.chapters.size} chapters.")
+	if (PRINT_PASSAGES)
+		println("Passage:\t${passage.decodeToString()}")
+	else
+		println(with(passage.decodeToString()) {
+			if (length < 25) "Result: $this"
+			else "$length chars long result: " +
+					"${take(10)} [...] ${takeLast(10)}"
+		})
+}
+
+@ExperimentalTime
+@Suppress("ConstantConditionIf")
+private fun showListing(ext: IExtension, novels: Array<Novel.Listing>) {
+	if (PRINT_LISTINGS) {
+		println("$CPURPLE[")
+		print(novels.joinToString(", ") { it.toString() })
+		println("]$CRESET")
+	}
+
+	println("${novels.size} novels.")
+	if (PRINT_LIST_STATS) {
+		print("${novels.count { it.title.isEmpty() }} with no title, ")
+		print("${novels.count { it.link.isEmpty() }} with no link, ")
+		print("${novels.count { it.imageURL.isEmpty() }} with no image url.")
 		println()
-
-		val passage = outputTimedValue("ext.getPassage") {
-			ext.getPassage(novel.chapters[SPECIFIC_CHAPTER].link)
-		}
-
-		if (PRINT_PASSAGES)
-			println("Passage:\t${passage.decodeToString()}")
-		else
-			println(with(passage.decodeToString()) {
-				if (length < 25) "Result: $this"
-				else "$length chars long result: " +
-						"${take(10)} [...] ${takeLast(10)}"
-			})
 	}
 
-	@ExperimentalTime
-	@Suppress("ConstantConditionIf")
-	private fun showListing(ext: IExtension, novels: Array<Novel.Listing>) {
-		if (PRINT_LISTINGS) {
-			println("$CPURPLE[")
-			print(novels.joinToString(", ") { it.toString() })
-			println("]$CRESET")
-		}
+	println()
 
-		println("${novels.size} novels.")
-		if (PRINT_LIST_STATS) {
-			print("${novels.count { it.title.isEmpty() }} with no title, ")
-			print("${novels.count { it.link.isEmpty() }} with no link, ")
-			print("${novels.count { it.imageURL.isEmpty() }} with no image url.")
-			println()
-		}
+	var selectedNovel = 0
+	println(novels[selectedNovel].link)
+	var novel = outputTimedValue("ext.parseNovel") {
+		ext.parseNovel(novels[selectedNovel].link, true)
+	}
 
-		println()
-
-		var selectedNovel = 0
-		println(novels[selectedNovel].link)
-		var novel = outputTimedValue("ext.parseNovel") {
+	while (novel.chapters.isEmpty()) {
+		println("$CRED Chapters are empty, trying next novel $CRESET")
+		selectedNovel++
+		novel = outputTimedValue("ext.parseNovel") {
 			ext.parseNovel(novels[selectedNovel].link, true)
 		}
+	}
 
-		while (novel.chapters.isEmpty()) {
-			println("$CRED Chapters are empty, trying next novel $CRESET")
-			selectedNovel++
-			novel = outputTimedValue("ext.parseNovel") {
-				ext.parseNovel(novels[selectedNovel].link, true)
+	if (PRINT_NOVELS)
+		println(novel)
+
+	if (PRINT_NOVEL_STATS)
+		println("${novel.title} - ${novel.chapters.size} chapters.")
+
+	println()
+
+
+	val passage = outputTimedValue("ext.getPassage") {
+		ext.getPassage(novel.chapters[0].link)
+	}
+
+
+	if (PRINT_PASSAGES)
+		println("Passage:\t${passage.decodeToString()}")
+	else
+		println(with(passage.decodeToString()) {
+			if (length < 25) "Result: $this"
+			else "$length chars long result: " +
+					"${take(10)} [...] ${takeLast(10)}"
+		})
+}
+
+@Suppress("UNCHECKED_CAST")
+fun Array<Filter<*>>.printOut(indent: Int = 0) {
+	forEach { filter ->
+		val id = filter.id
+		val fName = filter.name
+
+		val tabs = StringBuilder("\t").apply {
+			for (i in 0 until indent)
+				this.append("\t")
+		}
+		val name = filter.javaClass.simpleName.let {
+			if (it.length > 7)
+				it.substring(0, 6)
+			else it
+		}
+		val fullName = filter.state?.javaClass?.simpleName
+
+		println("$tabs>${name}\t[$id]\t${fName}\t={$fullName}")
+		when (filter) {
+			is Filter.List -> {
+				filter.filters.printOut(indent + 1)
+			}
+			is Filter.Group<*> -> {
+				(filter.filters as Array<Filter<*>>)
+					.printOut(indent + 1)
+			}
+			else -> {
 			}
 		}
+	}
+}
 
-		if (PRINT_NOVELS)
-			println(novel)
+@ExperimentalTime
+private inline fun <T> outputTimedValue(job: String, block: () -> T): T {
+	return measureTimedValue(block).also {
+		printExecutionTime(job, it.duration)
+	}.value
+}
 
-		if (PRINT_NOVEL_STATS)
-			println("${novel.title} - ${novel.chapters.size} chapters.")
+@ExperimentalTime
+private fun printExecutionTime(job: String, time: Duration) {
+	printExecutionTime(job, time.toDouble(DurationUnit.MILLISECONDS))
+}
 
-		println()
+private fun printExecutionTime(job: String, timeMs: Double) {
+	println("$CGREEN COMPLETED [$job] in $timeMs ms $CRED")
+}
+
+private const val ARGUMENT_HELP_QUICK = "-h"
+private const val ARGUMENT_HELP = "--help"
+
+private const val ARGUMENT_REPO = "-r"
+
+private const val ARGUMENT_EXT = "-e"
+
+private fun printQuickHelp() {
+	println("Usage: PROGRAM -r /path/to/repo EXTENSION")
+	println("Try 'PROGRAM $ARGUMENT_HELP' for more information.")
+}
+
+private fun printHelp() {
+	println("Usage: PROGRAM -r /path/to/repo EXTENSION")
+	println("Test a shosetsu extension")
+	println("Example: PROGRAM -r /a/valid/repository/path/ ./extension.lua")
+	println()
+	println("Options:")
+	println("$ARGUMENT_HELP_QUICK:\tProvides a quick bit of help")
+	println("$ARGUMENT_HELP:\tPrints this page")
+	println("$ARGUMENT_REPO:\tSpecifies repository path to use")
+	println("$ARGUMENT_EXT:\tSpecifies which extension to use")
+}
 
 
-		val passage = outputTimedValue("ext.getPassage") {
-			ext.getPassage(novel.chapters[0].link)
+@OptIn(ExperimentalTime::class)
+fun main(args: Array<String>) {
+	ShosetsuLuaLib.libLoader = {
+		outputTimedValue("loadScript") {
+			loadScript(
+				File("$DIRECTORY/src/main/resources/lib/$it.lua"),
+				"lib"
+			)
 		}
-
-
-		if (PRINT_PASSAGES)
-			println("Passage:\t${passage.decodeToString()}")
-		else
-			println(with(passage.decodeToString()) {
-				if (length < 25) "Result: $this"
-				else "$length chars long result: " +
-						"${take(10)} [...] ${takeLast(10)}"
+	}
+	httpClient = OkHttpClient.Builder().addInterceptor {
+		outputTimedValue("Time till response") {
+			it.proceed(it.request().also { request ->
+				println(request.url.toUrl().toString())
 			})
-	}
-
-	@Suppress("UNCHECKED_CAST")
-	fun Array<Filter<*>>.printOut(indent: Int = 0) {
-		forEach { filter ->
-			val id = filter.id
-			val fName = filter.name
-
-			val tabs = StringBuilder("\t").apply {
-				for (i in 0 until indent)
-					this.append("\t")
-			}
-			val name = filter.javaClass.simpleName.let {
-				if (it.length > 7)
-					it.substring(0, 6)
-				else it
-			}
-			val fullName = filter.state?.javaClass?.simpleName
-
-			println("$tabs>${name}\t[$id]\t${fName}\t={$fullName}")
-			when (filter) {
-				is Filter.List -> {
-					filter.filters.printOut(indent + 1)
-				}
-				is Filter.Group<*> -> {
-					(filter.filters as Array<Filter<*>>)
-						.printOut(indent + 1)
-				}
-				else -> {
-				}
-			}
 		}
-	}
+	}.build()
 
-	@ExperimentalTime
-	private inline fun <T> outputTimedValue(job: String, block: () -> T): T {
-		return measureTimedValue(block).also {
-			printExecutionTime(job, it.duration)
-		}.value
-	}
+	var skipToIndex = -1
 
-	@ExperimentalTime
-	private fun printExecutionTime(job: String, time: Duration) {
-		printExecutionTime(job, time.toDouble(DurationUnit.MILLISECONDS))
-	}
+	args.forEachIndexed { index, argument ->
+		// In case the argument consumes the next, we skip
+		if (skipToIndex != -1 && skipToIndex != index) return@forEachIndexed
 
-	private fun printExecutionTime(job: String, timeMs: Double) {
-		println("$CGREEN COMPLETED [$job] in $timeMs ms $CRED")
-	}
-
-	private const val ARGUMENT_HELP_QUICK = "-h"
-	private const val ARGUMENT_HELP = "--help"
-
-	private const val ARGUMENT_REPO = "-r"
-
-	private const val ARGUMENT_EXT = "-e"
-
-	private fun printQuickHelp() {
-		println("Usage: PROGRAM -r /path/to/repo EXTENSION")
-		println("Try 'PROGRAM $ARGUMENT_HELP' for more information.")
-	}
-
-	private fun printHelp() {
-		println("Usage: PROGRAM -r /path/to/repo EXTENSION")
-		println("Test a shosetsu extension")
-		println("Example: PROGRAM -r /a/valid/repository/path/ ./extension.lua")
-		println()
-		println("Options:")
-		println("$ARGUMENT_HELP_QUICK:\tProvides a quick bit of help")
-		println("$ARGUMENT_HELP:\tPrints this page")
-		println("$ARGUMENT_REPO:\tSpecifies repository path to use")
-		println("$ARGUMENT_EXT:\tSpecifies which extension to use")
-	}
-
-
-	@ExperimentalTime
-	@JvmStatic
-	@Throws(java.io.IOException::class, InterruptedException::class)
-	fun main(args: Array<String>) {
-
-		var skipToIndex = -1
-
-		args.forEachIndexed { index, argument ->
-			// In case the argument consumes the next, we skip
-			if (skipToIndex != -1 && skipToIndex != index) return@forEachIndexed
-
-			when (argument) {
-				ARGUMENT_HELP_QUICK -> {
-					printQuickHelp()
+		when (argument) {
+			ARGUMENT_HELP_QUICK -> {
+				printQuickHelp()
+				return
+			}
+			ARGUMENT_HELP -> {
+				printHelp()
+				return
+			}
+			ARGUMENT_REPO -> {
+				if (args.size > index + 1) {
+					DIRECTORY = args[index + 1]
+					skipToIndex = index + 2
+				} else {
+					println("${CRED}${ARGUMENT_REPO} has not been provided a path${CRESET}")
 					return
 				}
-				ARGUMENT_HELP -> {
-					printHelp()
-					return
-				}
-				ARGUMENT_REPO -> {
-					if (args.size > index + 1) {
-						DIRECTORY = args[index + 1]
-						skipToIndex = index + 2
-					} else {
-						println("${CRED}${ARGUMENT_REPO} has not been provided a path${CRESET}")
-						return
-					}
-				}
-				ARGUMENT_EXT -> {
-					if (args.size > index + 1) {
-						val path = args[index + 1]
-						val fileExt = path.substringAfterLast(".")
-						val type = when (fileExt.lowercase(Locale.getDefault())) {
-							"lua" -> LuaScript
-							else -> {
-								println("${CRED}Unknown file type $fileExt${CRESET}")
-								return
-							}
-						}
-
-						SOURCES = arrayOf(path to type)
-						skipToIndex = index + 2
-					} else {
-						println("${CRED}${ARGUMENT_EXT} has not been provided an extension${CRESET}")
-						return
-					}
-				}
-				else -> {
+			}
+			ARGUMENT_EXT -> {
+				if (args.size > index + 1) {
 					val path = args[index + 1]
 					val fileExt = path.substringAfterLast(".")
 					val type = when (fileExt.lowercase(Locale.getDefault())) {
@@ -328,70 +305,103 @@ object Test {
 
 					SOURCES = arrayOf(path to type)
 					skipToIndex = index + 2
+				} else {
+					println("${CRED}${ARGUMENT_EXT} has not been provided an extension${CRESET}")
+					return
 				}
 			}
+			else -> {
+				val path = args[index + 1]
+				val fileExt = path.substringAfterLast(".")
+				val type = when (fileExt.lowercase(Locale.getDefault())) {
+					"lua" -> LuaScript
+					else -> {
+						println("${CRED}Unknown file type $fileExt${CRESET}")
+						return
+					}
+				}
+
+				SOURCES = arrayOf(path to type)
+				skipToIndex = index + 2
+			}
 		}
+	}
 
-		outputTimedValue("MAIN") {
-			try {
-				if (PRINT_REPO_INDEX)
-					println(outputTimedValue("RepoIndexLoad") {
-						json.encodeToString(
-							RepoIndex.fromString(
-								File("src/main/resources/index.json")
-									.readText()
-							)
+	outputTimedValue("MAIN") {
+		try {
+			if (PRINT_REPO_INDEX)
+				println(outputTimedValue("RepoIndexLoad") {
+					json.encodeToString(
+						RepoIndex.fromString(
+							File("src/main/resources/index.json")
+								.readText()
 						)
-					})
+					)
+				})
 
-				kotlin.run {
-					for (extensionPath in SOURCES) {
-						println("\n\n========== $extensionPath ==========")
+			kotlin.run {
+				for (extensionPath in SOURCES) {
+					println("\n\n========== $extensionPath ==========")
 
 
-						val extension = outputTimedValue("LuaExtension") {
-							val file = File(extensionPath.first)
-							when (extensionPath.second) {
-								LuaScript -> LuaExtension(file)
-								KotlinScript -> throw Exception("Stub")
-							}
+					val extension = outputTimedValue("LuaExtension") {
+						val file = File(extensionPath.first)
+						when (extensionPath.second) {
+							LuaScript -> LuaExtension(file)
+							KotlinScript -> throw Exception("Stub")
 						}
+					}
 
-						if (SPECIFIC_NOVEL) {
-							showNovel(extension, SPECIFIC_NOVEL_URL)
-							return@run
-						}
+					if (SPECIFIC_NOVEL) {
+						showNovel(extension, SPECIFIC_NOVEL_URL)
+						return@run
+					}
 
 
-						val settingsModel: Map<Int, *> =
-							extension.settingsModel.also {
-								println("Settings model:")
-								it.printOut()
-							}.mapify()
-						val searchFiltersModel: Map<Int, *> =
-							extension.searchFiltersModel.also {
-								println("SearchFilters Model:")
-								it.printOut()
-							}.mapify()
+					val settingsModel: Map<Int, *> =
+						extension.settingsModel.also {
+							println("Settings model:")
+							it.printOut()
+						}.mapify()
+					val searchFiltersModel: Map<Int, *> =
+						extension.searchFiltersModel.also {
+							println("SearchFilters Model:")
+							it.printOut()
+						}.mapify()
 
-						println(CCYAN)
-						println("ID       : ${extension.formatterID}")
-						println("Name     : ${extension.name}")
-						println("BaseURL  : ${extension.baseURL}")
-						println("Image    : ${extension.imageURL}")
-						println("Settings : $settingsModel")
-						println("Filters  : $searchFiltersModel")
-						if (PRINT_METADATA)
-							println("MetaData : ${Json { prettyPrint = true }.encodeToString(extension.exMetaData)}")
-						println(CRESET)
+					println(CCYAN)
+					println("ID       : ${extension.formatterID}")
+					println("Name     : ${extension.name}")
+					println("BaseURL  : ${extension.baseURL}")
+					println("Image    : ${extension.imageURL}")
+					println("Settings : $settingsModel")
+					println("Filters  : $searchFiltersModel")
+					if (PRINT_METADATA)
+						println("MetaData : ${Json { prettyPrint = true }.encodeToString(extension.exMetaData)}")
+					println(CRESET)
 
-						extension.listings.forEach { l ->
-							with(l) {
-								print("\n-------- Listing \"${name}\" ")
-								print(if (isIncrementing) "(incrementing)" else "")
-								println(" --------")
+					extension.listings.forEach { l ->
+						with(l) {
+							print("\n-------- Listing \"${name}\" ")
+							print(if (isIncrementing) "(incrementing)" else "")
+							println(" --------")
 
-								var novels = getListing(
+							var novels = getListing(
+								HashMap(searchFiltersModel).apply {
+									this[PAGE_INDEX] =
+										if (isIncrementing) 1 else null
+
+								}
+							)
+
+							if (isIncrementing)
+								novels += getListing(HashMap(searchFiltersModel)
+									.apply {
+										this[PAGE_INDEX] = 2
+									})
+
+							if (REPEAT) {
+								novels = getListing(
 									HashMap(searchFiltersModel).apply {
 										this[PAGE_INDEX] =
 											if (isIncrementing) 1 else null
@@ -404,77 +414,61 @@ object Test {
 										.apply {
 											this[PAGE_INDEX] = 2
 										})
-
-								if (REPEAT) {
-									novels = getListing(
-										HashMap(searchFiltersModel).apply {
-											this[PAGE_INDEX] =
-												if (isIncrementing) 1 else null
-
-										}
-									)
-
-									if (isIncrementing)
-										novels += getListing(HashMap(searchFiltersModel)
-											.apply {
-												this[PAGE_INDEX] = 2
-											})
-								}
+							}
 
 
-								showListing(extension, novels)
-								try {
-									MILLISECONDS.sleep(500)
-								} catch (e: InterruptedException) {
-									e.printStackTrace()
-								}
+							showListing(extension, novels)
+							try {
+								MILLISECONDS.sleep(500)
+							} catch (e: InterruptedException) {
+								e.printStackTrace()
 							}
 						}
+					}
 
-						if (extension.hasSearch) {
-							println("\n-------- Search --------")
+					if (extension.hasSearch) {
+						println("\n-------- Search --------")
+						showListing(
+							extension,
+							outputTimedValue("ext.search") {
+								extension.search(
+									HashMap(searchFiltersModel).apply {
+										set(QUERY_INDEX, SEARCH_VALUE)
+										set(PAGE_INDEX, 0)
+									}
+								)
+							}
+						)
+						if (extension.isSearchIncrementing) {
 							showListing(
 								extension,
 								outputTimedValue("ext.search") {
 									extension.search(
 										HashMap(searchFiltersModel).apply {
 											set(QUERY_INDEX, SEARCH_VALUE)
-											set(PAGE_INDEX, 0)
+											set(PAGE_INDEX, 2)
 										}
 									)
 								}
 							)
-							if (extension.isSearchIncrementing) {
-								showListing(
-									extension,
-									outputTimedValue("ext.search") {
-										extension.search(
-											HashMap(searchFiltersModel).apply {
-												set(QUERY_INDEX, SEARCH_VALUE)
-												set(PAGE_INDEX, 2)
-											}
-										)
-									}
-								)
-							}
 						}
-
-						MILLISECONDS.sleep(500)
 					}
-				}
 
-
-				println("\n\tTESTS COMPLETE")
-				exitProcess(0)
-			} catch (e: Exception) {
-				e.printStackTrace()
-				e.message?.let {
-					print(CRED)
-					print(it.substring(it.lastIndexOf("}") + 1))
-					println(CRESET)
+					MILLISECONDS.sleep(500)
 				}
-				exitProcess(1)
 			}
+
+
+			println("\n\tTESTS COMPLETE")
+			exitProcess(0)
+		} catch (e: Exception) {
+			e.printStackTrace()
+			e.message?.let {
+				print(CRED)
+				print(it.substring(it.lastIndexOf("}") + 1))
+				println(CRESET)
+			}
+			exitProcess(1)
 		}
 	}
 }
