@@ -1,5 +1,3 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
 	kotlin("jvm") version "1.5.31"
 	application
@@ -38,3 +36,23 @@ tasks.test {
 application {
 	mainClass.set("TestKt")
 }
+
+tasks.register<Jar>("assembleJar") {
+	archiveClassifier.set("runnable")
+	duplicatesStrategy = DuplicatesStrategy.INCLUDE
+
+	manifest {
+		attributes(
+			"Main-Class" to application.mainClass,
+			"Implementation-Title" to "Gradle",
+			"Implementation-Version" to archiveVersion
+		)
+	}
+
+	from(sourceSets.main.get().output)
+	dependsOn(configurations.runtimeClasspath)
+	from(
+		configurations.runtimeClasspath.get().filter { it.name.endsWith("jar") }.map { zipTree(it) }
+	)
+}
+

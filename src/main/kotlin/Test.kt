@@ -306,7 +306,7 @@ fun main(args: Array<String>) {
 				}
 			}
 			else -> {
-				val path = args[index + 1]
+				val path = args[index]
 				val fileExt = path.substringAfterLast(".")
 				val type = when (fileExt.lowercase(Locale.getDefault())) {
 					"lua" -> LuaScript
@@ -317,6 +317,7 @@ fun main(args: Array<String>) {
 				}
 
 				SOURCES = arrayOf(path to type)
+				extensionSet = true
 				skipToIndex = index + 2
 			}
 		}
@@ -335,7 +336,7 @@ fun main(args: Array<String>) {
 	ShosetsuLuaLib.libLoader = {
 		outputTimedValue("loadScript") {
 			loadScript(
-				File("$DIRECTORY/src/main/resources/lib/$it.lua"),
+				File("$DIRECTORY/lib/$it.lua"),
 				"lib"
 			)
 		}
