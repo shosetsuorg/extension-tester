@@ -248,26 +248,19 @@ private fun printHelp() {
 	println("$ARGUMENT_EXT:\tSpecifies which extension to use")
 }
 
+private fun printErrorln(message: String) {
+	println("$CRED$message$CRESET")
+}
 
 @ExperimentalTime
 fun main(args: Array<String>) {
-	ShosetsuLuaLib.libLoader = {
-		outputTimedValue("loadScript") {
-			loadScript(
-				File("$DIRECTORY/src/main/resources/lib/$it.lua"),
-				"lib"
-			)
-		}
+	if (args.isEmpty()) {
+		printErrorln("This program requires arguments")
+		return
 	}
-	httpClient = OkHttpClient.Builder().addInterceptor {
-		outputTimedValue("Time till response") {
-			it.proceed(it.request().also { request ->
-				println(request.url.toUrl().toString())
-			})
-		}
-	}.build()
-
 	var skipToIndex = -1
+	var repositorySet = false
+	var extensionSet = false
 
 	args.forEachIndexed { index, argument ->
 		// In case the argument consumes the next, we skip
@@ -285,9 +278,10 @@ fun main(args: Array<String>) {
 			ARGUMENT_REPO -> {
 				if (args.size > index + 1) {
 					DIRECTORY = args[index + 1]
+					repositorySet = true
 					skipToIndex = index + 2
 				} else {
-					println("${CRED}${ARGUMENT_REPO} has not been provided a path${CRESET}")
+					printErrorln("${ARGUMENT_REPO} has not been provided a path")
 					return
 				}
 			}
@@ -298,15 +292,16 @@ fun main(args: Array<String>) {
 					val type = when (fileExt.lowercase(Locale.getDefault())) {
 						"lua" -> LuaScript
 						else -> {
-							println("${CRED}Unknown file type $fileExt${CRESET}")
+							printErrorln("Unknown file type $fileExt")
 							return
 						}
 					}
 
 					SOURCES = arrayOf(path to type)
+					extensionSet = true
 					skipToIndex = index + 2
 				} else {
-					println("${CRED}${ARGUMENT_EXT} has not been provided an extension${CRESET}")
+					printErrorln("${ARGUMENT_EXT} has not been provided an extension")
 					return
 				}
 			}
@@ -316,7 +311,7 @@ fun main(args: Array<String>) {
 				val type = when (fileExt.lowercase(Locale.getDefault())) {
 					"lua" -> LuaScript
 					else -> {
-						println("${CRED}Unknown file type $fileExt${CRESET}")
+						printErrorln("Unknown file type $fileExt")
 						return
 					}
 				}
@@ -326,6 +321,32 @@ fun main(args: Array<String>) {
 			}
 		}
 	}
+
+	if (!repositorySet) {
+		printErrorln("Repository not provided")
+		return
+	}
+
+	if (!extensionSet) {
+		printErrorln("No extension provided")
+		return
+	}
+
+	ShosetsuLuaLib.libLoader = {
+		outputTimedValue("loadScript") {
+			loadScript(
+				File("$DIRECTORY/src/main/resources/lib/$it.lua"),
+				"lib"
+			)
+		}
+	}
+	httpClient = OkHttpClient.Builder().addInterceptor {
+		outputTimedValue("Time till response") {
+			it.proceed(it.request().also { request ->
+				println(request.url.toUrl().toString())
+			})
+		}
+	}.build()
 
 	outputTimedValue("MAIN") {
 		try {
