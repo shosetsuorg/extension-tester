@@ -49,7 +49,7 @@ private const val PRINT_LISTINGS = false
 private const val PRINT_LIST_STATS = true
 private const val PRINT_NOVELS = false
 private const val PRINT_NOVEL_STATS = true
-private const val PRINT_PASSAGES = true
+private const val PRINT_PASSAGES = false
 private const val PRINT_REPO_INDEX = false
 private const val PRINT_METADATA = false
 private const val REPEAT = false
@@ -456,7 +456,7 @@ fun main(args: Array<String>) {
 								extension.search(
 									HashMap(searchFiltersModel).apply {
 										set(QUERY_INDEX, SEARCH_VALUE)
-										set(PAGE_INDEX, 0)
+										set(PAGE_INDEX, 1)
 									}
 								)
 							}
