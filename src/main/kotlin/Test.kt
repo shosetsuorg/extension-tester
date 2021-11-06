@@ -88,7 +88,7 @@ private fun loadScript(file: File, source_pre: String = "ext"): LuaValue {
 	return l.call()!!
 }
 
-@OptIn(ExperimentalTime::class)
+@ExperimentalTime
 private fun showNovel(ext: IExtension, novelURL: String) {
 	val novel = outputTimedValue("ext.parseNovel") {
 		ext.parseNovel(novelURL, true)
@@ -249,7 +249,7 @@ private fun printHelp() {
 }
 
 
-@OptIn(ExperimentalTime::class)
+@ExperimentalTime
 fun main(args: Array<String>) {
 	ShosetsuLuaLib.libLoader = {
 		outputTimedValue("loadScript") {
