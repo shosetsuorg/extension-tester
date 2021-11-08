@@ -12,6 +12,7 @@ import Config.SPECIFIC_CHAPTER
 import Config.SPECIFIC_NOVEL
 import Config.SPECIFIC_NOVEL_URL
 import app.shosetsu.lib.ExtensionType
+import java.lang.RuntimeException
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -43,20 +44,31 @@ const val CRED: String = "\u001B[31m"
 const val CGREEN: String = "\u001B[32m"
 
 fun printQuickHelp() {
-	println("Usage: PROGRAM -r /path/to/repo EXTENSION")
+	println("Usage: PROGRAM EXTENSION")
 	println("Try 'PROGRAM $ARGUMENT_HELP' for more information.")
 }
 
 fun printHelp() {
-	println("Usage: PROGRAM -r /path/to/repo EXTENSION")
+	println("Usage: PROGRAM EXTENSION")
 	println("Test a shosetsu extension")
-	println("Example: PROGRAM -r /a/valid/repository/path/ ./extension.lua")
+	println("Example: PROGRAM ./extension.lua")
 	println()
 	println("Options:")
-	println("$ARG_FLAG_QUICK_HELP:\tProvides a quick bit of help")
-	println("$ARGUMENT_HELP:\tPrints this page")
-	println("$ARG_FLAG_REPO:\tSpecifies repository path to use")
-	println("$ARG_FLAG_EXT:\tSpecifies which extension to use")
+	println("\t$ARG_FLAG_QUICK_HELP:\tProvides a quick bit of help")
+	println("\t$ARGUMENT_HELP:\tPrints this page")
+	println("\t$ARG_FLAG_REPO:\tSpecifies repository path to use, Defaults to current directory")
+	println("\t$ARG_FLAG_EXT:\tSpecifies which extension to use")
+	println("\t$ARGUMENT_PRINT_LISTINGS:\n\t\tPrint out loaded listings")
+	println("\t$ARGUMENT_PRINT_LIST_STATS:\n\t\tPrint out stats of listings")
+	println("\t$ARGUMENT_PRINT_NOVELS:\n\t\tPrint out loaded novels")
+	println("\t$ARGUMENT_PRINT_NOVEL_STATS:\n\t\tPrint out stats of loaded novels")
+	println("\t$ARGUMENT_PRINT_PASSAGES:\n\t\tPrint out passages")
+	println("\t$ARGUMENT_PRINT_INDEX:\n\t\tPrint out repository index")
+	println("\t$ARGUMENT_PRINT_METADATA:\n\t\tPrint out meta data of an extension")
+	println("\t$ARGUMENT_REPEAT:\n\t\tRepeat a result, as sometimes there is an obscure error with reruns")
+	println("\t$ARGUMENT_TARGET_NOVEL:\n\t\tTarget a specific novel")
+	println("\t$ARGUMENT_TARGET_CHAPTER:\n\t\tTarget a specific chapter of a specific novel")
+
 }
 
 private fun Array<String>.toStack(): Stack<String> {
@@ -76,7 +88,6 @@ fun parseConfig(args: Array<String>) {
 		printErrorln("This program requires arguments")
 		quit()
 	}
-	var repositorySet = false
 	var extensionSet = false
 
 	val argumentStack = args.toStack()
@@ -93,7 +104,6 @@ fun parseConfig(args: Array<String>) {
 			ARG_FLAG_REPO -> {
 				if (argumentStack.isNotEmpty()) {
 					DIRECTORY = argumentStack.pop()
-					repositorySet = true
 				} else {
 					printErrorln("$ARG_FLAG_REPO has not been provided a path")
 					quit()
@@ -166,11 +176,6 @@ fun parseConfig(args: Array<String>) {
 			}
 		}
 	} while (argumentStack.isNotEmpty())
-
-	if (!repositorySet) {
-		printErrorln("Repository not provided")
-		quit()
-	}
 
 	if (!extensionSet) {
 		printErrorln("No extension provided")
