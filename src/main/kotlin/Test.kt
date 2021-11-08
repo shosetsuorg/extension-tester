@@ -239,12 +239,10 @@ fun main(args: Array<String>) {
 		try {
 			if (PRINT_REPO_INDEX)
 				println(outputTimedValue("RepoIndexLoad") {
-					json.encodeToString(
-						RepoIndex.fromString(
-							File("src/main/resources/index.json")
-								.readText()
-						)
-					)
+					RepoIndex.fromString(
+						File("$DIRECTORY/index.json")
+							.readText()
+					).prettyPrint()
 				})
 
 			run {
