@@ -1,10 +1,11 @@
 plugins {
 	kotlin("jvm") version "1.5.31"
+	id("com.github.gmazzo.buildconfig") version "3.0.3"
 	application
 }
 
 group = "com.github.doomsdayrs.lib"
-version = "1.0.0-alpha01"
+version = "1.0.0-alpha02"
 
 repositories {
 	mavenCentral()
@@ -13,6 +14,10 @@ repositories {
 
 java {
 	sourceCompatibility = JavaVersion.VERSION_1_8
+}
+
+buildConfig {
+	buildConfigField("String", "VERSION", "\"$version\"")
 }
 
 dependencies {
@@ -38,14 +43,17 @@ application {
 }
 
 tasks.register<Jar>("assembleJar") {
-	archiveClassifier.set("runnable")
+	val programVersion = archiveVersion.get()
+	archiveVersion.set("")
+
+
 	duplicatesStrategy = DuplicatesStrategy.INCLUDE
 
 	manifest {
 		attributes(
 			"Main-Class" to application.mainClass,
 			"Implementation-Title" to "Gradle",
-			"Implementation-Version" to archiveVersion
+			"Implementation-Version" to programVersion
 		)
 	}
 

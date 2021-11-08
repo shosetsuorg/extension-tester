@@ -12,7 +12,7 @@ import Config.SPECIFIC_CHAPTER
 import Config.SPECIFIC_NOVEL
 import Config.SPECIFIC_NOVEL_URL
 import app.shosetsu.lib.ExtensionType
-import java.lang.RuntimeException
+import com.github.doomsdayrs.lib.extension_tester.BuildConfig
 import java.util.*
 import kotlin.system.exitProcess
 
@@ -35,6 +35,7 @@ private const val ARGUMENT_PRINT_METADATA = "--print-meta"
 private const val ARGUMENT_REPEAT = "--repeat"
 private const val ARGUMENT_TARGET_NOVEL = "--target-novel"
 private const val ARGUMENT_TARGET_CHAPTER = "--target-chapter"
+private const val ARGUMENT_VERSION = "--version"
 
 /** Resets the color of a line */
 const val CRESET: String = "\u001B[0m"
@@ -68,7 +69,10 @@ fun printHelp() {
 	println("\t$ARGUMENT_REPEAT:\n\t\tRepeat a result, as sometimes there is an obscure error with reruns")
 	println("\t$ARGUMENT_TARGET_NOVEL:\n\t\tTarget a specific novel")
 	println("\t$ARGUMENT_TARGET_CHAPTER:\n\t\tTarget a specific chapter of a specific novel")
+}
 
+fun printVersion() {
+	println("Version: ${BuildConfig.VERSION}")
 }
 
 private fun Array<String>.toStack(): Stack<String> {
@@ -95,11 +99,11 @@ fun parseConfig(args: Array<String>) {
 		when (val argument = argumentStack.pop()) {
 			ARG_FLAG_QUICK_HELP -> {
 				printQuickHelp()
-				quit()
+				quit(0)
 			}
 			ARGUMENT_HELP -> {
 				printHelp()
-				quit()
+				quit(0)
 			}
 			ARG_FLAG_REPO -> {
 				if (argumentStack.isNotEmpty()) {
@@ -159,6 +163,10 @@ fun parseConfig(args: Array<String>) {
 					printErrorln("$ARGUMENT_TARGET_CHAPTER requires a chapter #")
 					quit()
 				}
+			}
+			ARGUMENT_VERSION -> {
+				printVersion()
+				quit(0)
 			}
 			else -> {
 				val fileExt = argument.substringAfterLast(".")

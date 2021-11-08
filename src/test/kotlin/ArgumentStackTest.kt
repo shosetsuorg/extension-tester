@@ -1,3 +1,4 @@
+import org.junit.Ignore
 import org.junit.Test
 import java.util.*
 
@@ -5,6 +6,7 @@ import java.util.*
  * extension-tester
  * 06 / 11 / 2021
  */
+@Ignore
 class ArgumentStackTest {
 
 	fun takeArgs(args: Array<String>) {
