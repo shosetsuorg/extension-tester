@@ -24,7 +24,7 @@ object Config {
 	var SPECIFIC_CHAPTER = 0
 
 	/** Replace with the directory of the extensions you want to use*/
-	var DIRECTORY = ""
+	var DIRECTORY = "./"
 
 	// Should be an array of the path of the script to the type of that script
 	var SOURCES: Array<Pair<String, ExtensionType>> = arrayOf()
