@@ -1,24 +1,3 @@
-import app.shosetsu.lib.*
-import app.shosetsu.lib.ExtensionType.KotlinScript
-import app.shosetsu.lib.ExtensionType.LuaScript
-import app.shosetsu.lib.ShosetsuSharedLib.httpClient
-import app.shosetsu.lib.json.RepoIndex
-import app.shosetsu.lib.lua.LuaExtension
-import app.shosetsu.lib.lua.ShosetsuLuaLib
-import app.shosetsu.lib.lua.shosetsuGlobals
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
-import okhttp3.OkHttpClient
-import org.luaj.vm2.LuaValue
-import java.io.File
-import java.util.*
-import java.util.concurrent.TimeUnit.MILLISECONDS
-import kotlin.system.exitProcess
-import kotlin.time.Duration
-import kotlin.time.DurationUnit
-import kotlin.time.ExperimentalTime
-import kotlin.time.measureTimedValue
-
 /*
  * This file is part of shosetsu-services.
  * shosetsu-services is free software: you can redistribute it and/or modify
@@ -33,9 +12,41 @@ import kotlin.time.measureTimedValue
  * along with shosetsu-services.  If not, see https://www.gnu.org/licenses/.
  */
 
-private val json = Json { prettyPrint = true }
+import Config.DIRECTORY
+import Config.PRINT_LISTINGS
+import Config.PRINT_LIST_STATS
+import Config.PRINT_METADATA
+import Config.PRINT_NOVELS
+import Config.PRINT_NOVEL_STATS
+import Config.PRINT_PASSAGES
+import Config.PRINT_REPO_INDEX
+import Config.REPEAT
+import Config.SEARCH_VALUE
+import Config.SOURCES
+import Config.SPECIFIC_CHAPTER
+import Config.SPECIFIC_NOVEL
+import Config.SPECIFIC_NOVEL_URL
+import app.shosetsu.lib.*
+import app.shosetsu.lib.ExtensionType.KotlinScript
+import app.shosetsu.lib.ExtensionType.LuaScript
+import app.shosetsu.lib.ShosetsuSharedLib.httpClient
+import app.shosetsu.lib.json.RepoIndex
+import app.shosetsu.lib.lua.LuaExtension
+import app.shosetsu.lib.lua.ShosetsuLuaLib
+import app.shosetsu.lib.lua.shosetsuGlobals
+import kotlinx.serialization.encodeToString
+import kotlinx.serialization.json.Json
+import okhttp3.OkHttpClient
+import org.luaj.vm2.LuaValue
+import java.io.File
+import java.util.concurrent.TimeUnit.MILLISECONDS
+import kotlin.system.exitProcess
+import kotlin.time.Duration
+import kotlin.time.DurationUnit
+import kotlin.time.ExperimentalTime
+import kotlin.time.measureTimedValue
 
-/**
+/*
  * shosetsu-services
  * 03 / June / 2019
  *
@@ -64,20 +75,9 @@ private const val SPECIFIC_CHAPTER = 0
 /** Replace with the directory of the extensions you want to use*/
 private var DIRECTORY = ""
 
-private var SOURCES: Array<Pair<String, ExtensionType>> =
-	// Should be an array of the path of the script to the type of that script
-	arrayOf<Pair<String, ExtensionType>>()
-
-// END CONFIG
+private val json = Json { prettyPrint = true }
 
 private val globals = shosetsuGlobals()
-
-/** Resets the color of a line */
-private const val CRESET: String = "\u001B[0m"
-private const val CCYAN: String = "\u001B[36m"
-private const val CPURPLE: String = "\u001B[35m"
-private const val CRED: String = "\u001B[31m"
-private const val CGREEN: String = "\u001B[32m"
 
 private fun loadScript(file: File, source_pre: String = "ext"): LuaValue {
 	val l = try {
@@ -209,9 +209,9 @@ fun Array<Filter<*>>.printOut(indent: Int = 0) {
 }
 
 @ExperimentalTime
-private inline fun <T> outputTimedValue(job: String, block: () -> T): T {
+private inline fun <T> outputTimedValue(jobName: String, block: () -> T): T {
 	return measureTimedValue(block).also {
-		printExecutionTime(job, it.duration)
+		printExecutionTime(jobName, it.duration)
 	}.value
 }
 
@@ -224,115 +224,15 @@ private fun printExecutionTime(job: String, timeMs: Double) {
 	println("$CGREEN COMPLETED [$job] in $timeMs ms $CRED")
 }
 
-private const val ARGUMENT_HELP_QUICK = "-h"
-private const val ARGUMENT_HELP = "--help"
-
-private const val ARGUMENT_REPO = "-r"
-
-private const val ARGUMENT_EXT = "-e"
-
-private fun printQuickHelp() {
-	println("Usage: PROGRAM -r /path/to/repo EXTENSION")
-	println("Try 'PROGRAM $ARGUMENT_HELP' for more information.")
-}
-
-private fun printHelp() {
-	println("Usage: PROGRAM -r /path/to/repo EXTENSION")
-	println("Test a shosetsu extension")
-	println("Example: PROGRAM -r /a/valid/repository/path/ ./extension.lua")
-	println()
-	println("Options:")
-	println("$ARGUMENT_HELP_QUICK:\tProvides a quick bit of help")
-	println("$ARGUMENT_HELP:\tPrints this page")
-	println("$ARGUMENT_REPO:\tSpecifies repository path to use")
-	println("$ARGUMENT_EXT:\tSpecifies which extension to use")
-}
-
-private fun printErrorln(message: String) {
+fun printErrorln(message: String) {
 	println("$CRED$message$CRESET")
 }
 
+/**
+ * Establish
+ */
 @ExperimentalTime
-fun main(args: Array<String>) {
-	if (args.isEmpty()) {
-		printErrorln("This program requires arguments")
-		return
-	}
-	var skipToIndex = -1
-	var repositorySet = false
-	var extensionSet = false
-
-	args.forEachIndexed { index, argument ->
-		// In case the argument consumes the next, we skip
-		if (skipToIndex != -1 && skipToIndex != index) return@forEachIndexed
-
-		when (argument) {
-			ARGUMENT_HELP_QUICK -> {
-				printQuickHelp()
-				return
-			}
-			ARGUMENT_HELP -> {
-				printHelp()
-				return
-			}
-			ARGUMENT_REPO -> {
-				if (args.size > index + 1) {
-					DIRECTORY = args[index + 1]
-					repositorySet = true
-					skipToIndex = index + 2
-				} else {
-					printErrorln("${ARGUMENT_REPO} has not been provided a path")
-					return
-				}
-			}
-			ARGUMENT_EXT -> {
-				if (args.size > index + 1) {
-					val path = args[index + 1]
-					val fileExt = path.substringAfterLast(".")
-					val type = when (fileExt.lowercase(Locale.getDefault())) {
-						"lua" -> LuaScript
-						else -> {
-							printErrorln("Unknown file type $fileExt")
-							return
-						}
-					}
-
-					SOURCES = arrayOf(path to type)
-					extensionSet = true
-					skipToIndex = index + 2
-				} else {
-					printErrorln("${ARGUMENT_EXT} has not been provided an extension")
-					return
-				}
-			}
-			else -> {
-				val path = args[index]
-				val fileExt = path.substringAfterLast(".")
-				val type = when (fileExt.lowercase(Locale.getDefault())) {
-					"lua" -> LuaScript
-					else -> {
-						printErrorln("Unknown file type $fileExt")
-						return
-					}
-				}
-
-				SOURCES = arrayOf(path to type)
-				extensionSet = true
-				skipToIndex = index + 2
-			}
-		}
-	}
-
-	if (!repositorySet) {
-		printErrorln("Repository not provided")
-		return
-	}
-
-	if (!extensionSet) {
-		printErrorln("No extension provided")
-		return
-	}
-
+fun setupLibs() {
 	ShosetsuLuaLib.libLoader = {
 		outputTimedValue("loadScript") {
 			loadScript(
@@ -348,6 +248,14 @@ fun main(args: Array<String>) {
 			})
 		}
 	}.build()
+}
+
+@ExperimentalTime
+fun main(args: Array<String>) {
+
+	parseConfig(args)
+
+	setupLibs()
 
 	outputTimedValue("MAIN") {
 		try {
@@ -361,7 +269,7 @@ fun main(args: Array<String>) {
 					)
 				})
 
-			kotlin.run {
+			run {
 				for (extensionPath in SOURCES) {
 					println("\n\n========== $extensionPath ==========")
 
