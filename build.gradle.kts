@@ -1,5 +1,5 @@
 plugins {
-	kotlin("jvm") version "1.5.31"
+	kotlin("jvm") version "1.6.10"
 	id("com.github.gmazzo.buildconfig") version "3.0.3"
 	application
 }
@@ -23,12 +23,12 @@ buildConfig {
 dependencies {
 	testImplementation(kotlin("test"))
 
-	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.0")
+	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
 
 	implementation("com.github.shosetsuorg:kotlin-lib:v1.0.0-rc62")
 	implementation(kotlin("stdlib"))
 	implementation(kotlin("stdlib-jdk8"))
-	implementation("com.squareup.okhttp3:okhttp:4.9.2")
+	implementation("com.squareup.okhttp3:okhttp:4.9.3")
 	implementation("org.luaj:luaj-jse:3.0.1")
 
 	implementation(kotlin("reflect"))
