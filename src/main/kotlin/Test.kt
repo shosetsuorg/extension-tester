@@ -283,7 +283,13 @@ fun main(args: Array<String>) {
 					println("Settings : $settingsModel")
 					println("Filters  : $searchFiltersModel")
 					if (PRINT_METADATA)
-						println("MetaData : ${Json { prettyPrint = true }.encodeToString(extension.exMetaData)}")
+						println(
+							"MetaData : ${
+								Json {
+									prettyPrint = true
+								}.encodeToString(extension.exMetaData)
+							}"
+						)
 					println(CRESET)
 
 					extension.listings.forEach { l ->
@@ -295,7 +301,7 @@ fun main(args: Array<String>) {
 							var novels = getListing(
 								HashMap(searchFiltersModel).apply {
 									this[PAGE_INDEX] =
-										if (isIncrementing) 1 else null
+										if (isIncrementing) extension.startIndex else null
 
 								}
 							)
@@ -303,14 +309,14 @@ fun main(args: Array<String>) {
 							if (isIncrementing)
 								novels += getListing(HashMap(searchFiltersModel)
 									.apply {
-										this[PAGE_INDEX] = 2
+										this[PAGE_INDEX] = extension.startIndex + 1
 									})
 
 							if (REPEAT) {
 								novels = getListing(
 									HashMap(searchFiltersModel).apply {
 										this[PAGE_INDEX] =
-											if (isIncrementing) 1 else null
+											if (isIncrementing) extension.startIndex else null
 
 									}
 								)
@@ -318,7 +324,7 @@ fun main(args: Array<String>) {
 								if (isIncrementing)
 									novels += getListing(HashMap(searchFiltersModel)
 										.apply {
-											this[PAGE_INDEX] = 2
+											this[PAGE_INDEX] = extension.startIndex + 1
 										})
 							}
 
@@ -340,7 +346,7 @@ fun main(args: Array<String>) {
 								extension.search(
 									HashMap(searchFiltersModel).apply {
 										set(QUERY_INDEX, SEARCH_VALUE)
-										set(PAGE_INDEX, 0)
+										set(PAGE_INDEX, extension.startIndex)
 									}
 								)
 							}
@@ -352,7 +358,7 @@ fun main(args: Array<String>) {
 									extension.search(
 										HashMap(searchFiltersModel).apply {
 											set(QUERY_INDEX, SEARCH_VALUE)
-											set(PAGE_INDEX, 2)
+											set(PAGE_INDEX, extension.startIndex + 1)
 										}
 									)
 								}
