@@ -1,5 +1,5 @@
 plugins {
-	kotlin("jvm") version "1.6.20"
+	kotlin("jvm") version "1.7.21"
 	id("com.github.gmazzo.buildconfig") version "3.1.0"
 	application
 }
