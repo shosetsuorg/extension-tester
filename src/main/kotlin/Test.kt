@@ -27,15 +27,16 @@ import Config.SPECIFIC_CHAPTER
 import Config.SPECIFIC_NOVEL
 import Config.SPECIFIC_NOVEL_URL
 import app.shosetsu.lib.*
-import app.shosetsu.lib.ExtensionType.KotlinScript
 import app.shosetsu.lib.ExtensionType.LuaScript
 import app.shosetsu.lib.ShosetsuSharedLib.httpClient
 import app.shosetsu.lib.json.RepoIndex
 import app.shosetsu.lib.lua.LuaExtension
 import app.shosetsu.lib.lua.ShosetsuLuaLib
 import app.shosetsu.lib.lua.shosetsuGlobals
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.decodeFromStream
 import okhttp3.OkHttpClient
 import org.luaj.vm2.LuaValue
 import java.io.File
@@ -176,10 +177,12 @@ fun Array<Filter<*>>.printOut(indent: Int = 0) {
 			is Filter.List -> {
 				filter.filters.printOut(indent + 1)
 			}
+
 			is Filter.Group<*> -> {
 				(filter.filters as Array<Filter<*>>)
 					.printOut(indent + 1)
 			}
+
 			else -> {
 			}
 		}
@@ -228,6 +231,7 @@ fun setupLibs() {
 	}.build()
 }
 
+@OptIn(ExperimentalSerializationApi::class)
 @ExperimentalTime
 fun main(args: Array<String>) {
 
@@ -239,10 +243,8 @@ fun main(args: Array<String>) {
 		try {
 			if (PRINT_REPO_INDEX)
 				println(outputTimedValue("RepoIndexLoad") {
-					RepoIndex.fromString(
-						File("$DIRECTORY/index.json")
-							.readText()
-					).prettyPrint()
+					RepoIndex.repositoryJsonParser.decodeFromStream<RepoIndex>(File("$DIRECTORY/index.json").inputStream())
+						.prettyPrint()
 				})
 
 			run {
@@ -254,7 +256,6 @@ fun main(args: Array<String>) {
 						val file = File(extensionPath.first)
 						when (extensionPath.second) {
 							LuaScript -> LuaExtension(file)
-							KotlinScript -> throw Exception("Stub")
 						}
 					}
 

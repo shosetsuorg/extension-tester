@@ -1,6 +1,6 @@
 plugins {
 	kotlin("jvm") version "1.6.20"
-	id("com.github.gmazzo.buildconfig") version "3.0.3"
+	id("com.github.gmazzo.buildconfig") version "3.1.0"
 	application
 }
 
@@ -13,7 +13,7 @@ repositories {
 }
 
 java {
-	sourceCompatibility = JavaVersion.VERSION_1_8
+	sourceCompatibility = JavaVersion.VERSION_11
 }
 
 buildConfig {
@@ -23,12 +23,13 @@ buildConfig {
 dependencies {
 	testImplementation(kotlin("test"))
 
-	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.3.2")
+	implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.4.1")
 
-	implementation("com.github.shosetsuorg:kotlin-lib:2e27ebb")
+	implementation("com.github.shosetsuorg:kotlin-lib:1.0.0")
 	implementation(kotlin("stdlib"))
 	implementation(kotlin("stdlib-jdk8"))
-	implementation("com.squareup.okhttp3:okhttp:4.9.3")
+	implementation("org.jsoup:jsoup:1.15.3")
+	implementation("com.squareup.okhttp3:okhttp:4.10.0")
 	implementation("org.luaj:luaj-jse:3.0.1")
 
 	implementation(kotlin("reflect"))
